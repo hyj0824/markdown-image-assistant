@@ -4,6 +4,10 @@
   "description": "%ext.description%",
   "version": "0.0.1",
   "publisher": "hyj0824",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hyj0824/markdown-image-assistant"
+  },
   "engines": {
     "vscode": "^1.96.0"
   },
