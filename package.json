@@ -2,7 +2,7 @@
   "name": "markdown-image-assistant",
   "displayName": "%ext.displayName%",
   "description": "%ext.description%",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "hyj0824",
   "repository": {
     "type": "git",
@@ -41,7 +41,7 @@
       "properties": {
         "mdnote.path": {
           "type": "string",
-          "default": "assets/images/img-{date}-{counter}",
+          "default": "assets/images/${picOriginalName}",
           "description": "%config.path.description%"
         },
         "mdnote.compressQuality": {

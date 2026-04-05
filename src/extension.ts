@@ -14,6 +14,7 @@ type ImageItem = {
     name: string;
     extension: string;
     buffer: Uint8Array;
+    hash: string;
 };
 
 type TemplateVariables = Record<string, string>;
@@ -25,7 +26,7 @@ export function activate(context: vscode.ExtensionContext): void {
     // 总体流程：用户触发拖动/粘贴/命令 -> collect去重
     //  -> provider根据配置生成图片链接文本 -> 插入到markdown文档
 
-    // 一个插件只有一个provider
+    // 一个插件只有一个 provider
     const provider = new MarkdownImageInsertProvider();
 
     context.subscriptions.push(
@@ -114,7 +115,7 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
     async insertImageFromFileCommand(): Promise<void> {
         const editor = vscode.window.activeTextEditor;
         if (!editor || editor.document.languageId !== 'markdown') {
-            void vscode.window.showInformationMessage(vscode.l10n.t('Open a Markdown editor before inserting images.'));
+            void vscode.window.showInformationMessage(vscode.l10n.t('Open a Markdown file before inserting images.'));
             return;
         }
 
@@ -166,10 +167,9 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
                 return undefined;
             }
 
-            // counter is per operation batch index, not a persisted global counter.
             const item = items[index];
             const sourceName = item.name ?? `image-${index + 1}`;
-            const outputFile = await this.writeImage(document, workspaceFolder, config, sourceName, item.buffer, item.extension, index + 1);
+            const outputFile = await this.writeImage(document, workspaceFolder, config, sourceName, item.buffer, item.extension, item.hash);
             const relativePath = this.toMarkdownRelativePath(document.uri, outputFile);
             const altText = this.toAltText(sourceName);
             links.push(`![${altText}](${this.escapeMarkdownLink(relativePath)})`);
@@ -180,7 +180,6 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
 
     private async collectImageItems(dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<ImageItem[]> {
         const results: ImageItem[] = [];
-        // Same image may appear in multiple mime channels; hash-based dedupe keeps one copy.
         const seenKeys = new Set<string>();
 
         for (const [mimeType, item] of dataTransfer) {
@@ -249,11 +248,10 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
         sourceName: string,
         buffer: Uint8Array,
         extension: string,
-        counter: number
+        hash: string
     ): Promise<vscode.Uri> {
-        // Resolve template variables and split into target folder + base filename.
-        const variables = this.createTemplateVariables(document, workspaceFolder, sourceName, counter);
-        const output = this.resolveOutputTarget(workspaceFolder, config.path, variables, counter);
+        const variables = this.createTemplateVariables(document, workspaceFolder, sourceName, hash);
+        const output = this.resolveOutputTarget(workspaceFolder, config.path, variables);
         const folderUri = output.folderUri;
         await vscode.workspace.fs.createDirectory(folderUri);
 
@@ -317,7 +315,7 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
     private getConfig(document: vscode.TextDocument): ImageConfig {
         const config = vscode.workspace.getConfiguration('mdnote', document.uri);
         return {
-            path: config.get<string>('path', 'assets/images/img-{date}-{counter}'),
+            path: config.get<string>('path', 'assets/images/${picOriginalName}'),
             compressQuality: config.get<number>('compressQuality', 82),
             maxWidth: config.get<number>('maxWidth', 1600),
             outputFormat: config.get<'keep' | 'webp'>('outputFormat', 'keep')
@@ -331,13 +329,14 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
         extension: string,
         buffer: Uint8Array
     ): void {
-        const key = `${name.toLowerCase()}:${createHash('sha1').update(buffer).digest('hex')}`;
+        const hash = this.hashBuffer(buffer);
+        const key = `${name.toLowerCase()}:${hash}`;
         if (seenKeys.has(key)) {
             return;
         }
 
         seenKeys.add(key);
-        results.push({ name, extension, buffer });
+        results.push({ name, extension, buffer, hash });
     }
 
     private resolveOutputExtension(sourceExtension: string, outputFormat: 'keep' | 'webp'): string {
@@ -352,11 +351,9 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
     private resolveOutputTarget(
         workspaceFolder: vscode.Uri,
         pathTemplate: string,
-        variables: TemplateVariables,
-        counter: number
+        variables: TemplateVariables
     ): { folderUri: vscode.Uri; baseName: string } {
-        // mdnote.path is "folder + filename pattern" in one string.
-        const expanded = this.replaceTemplateVariables(pathTemplate, variables).trim() || 'assets/images/img-{date}-{counter}';
+        const expanded = this.replaceTemplateVariables(pathTemplate, variables).trim() || 'assets/images/${picOriginalName}';
         const normalized = expanded.replace(/\\/g, '/');
         const hasTrailingSlash = /\/$/.test(normalized);
 
@@ -374,8 +371,8 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
         }
 
         const folderUri = this.toTargetFolderUri(workspaceFolder, folderPart);
-        const baseNamePattern = filePart || 'img-{date}-{counter}';
-        const baseName = this.buildFileName(baseNamePattern, counter, variables);
+        const baseNamePattern = filePart || '${picOriginalName}';
+        const baseName = this.buildFileName(baseNamePattern, variables);
         return { folderUri, baseName };
     }
 
@@ -392,18 +389,8 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
         return vscode.Uri.joinPath(workspaceFolder, ...normalized.split('/').filter(Boolean));
     }
 
-    private buildFileName(pattern: string, counter: number, variables: TemplateVariables): string {
-        const now = new Date();
-        const date = now.toISOString().slice(0, 10).replace(/-/g, '');
-        const time = now.toISOString().slice(11, 19).replace(/:/g, '');
-
-        const expanded = this.replaceTemplateVariables(pattern, variables)
-            .replaceAll('{date}', date)
-            .replaceAll('{time}', time)
-            .replaceAll('{counter}', String(counter).padStart(2, '0'))
-            .replaceAll('{name}', variables.fileBaseName ?? 'image');
-
-        // Extension is always controlled by plugin output format, not by user path template.
+    private buildFileName(pattern: string, variables: TemplateVariables): string {
+        const expanded = this.replaceTemplateVariables(pattern, variables);
         const withoutExt = path.parse(expanded).name || expanded;
 
         const sanitized = withoutExt
@@ -412,14 +399,14 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
             .replace(/[. ]+$/g, '')
             .trim();
 
-        return sanitized || `image-${String(counter).padStart(2, '0')}`;
+        return sanitized || variables.picOriginalName || 'image';
     }
 
     private createTemplateVariables(
         document: vscode.TextDocument,
         workspaceFolder: vscode.Uri,
         sourceName: string,
-        counter: number
+        hash: string
     ): TemplateVariables {
         const documentFilePath = document.uri.fsPath;
         const documentDirName = path.dirname(documentFilePath);
@@ -427,6 +414,9 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
         const fileName = path.basename(sourceName);
         const picOriginalName = path.basename(sourceName, path.extname(sourceName));
         const fileBaseName = path.basename(sourceName, path.extname(sourceName)).replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'image';
+        const now = new Date();
+        const date = now.toISOString().slice(0, 10).replace(/-/g, '');
+        const time = now.toISOString().slice(11, 19).replace(/:/g, '');
 
         let documentRelativeFilePath = path.relative(workspaceFolder.fsPath, documentFilePath);
         if (!documentRelativeFilePath || documentRelativeFilePath.startsWith('..')) {
@@ -436,11 +426,12 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
         const documentRelativeDirName = path.dirname(documentRelativeFilePath);
         const normalizedRelativeDirName = documentRelativeDirName === '.' ? '' : documentRelativeDirName;
 
-        const now = new Date();
         const unixTime = String(Date.now());
         const isoTime = now.toISOString();
 
         return {
+            date,
+            time,
             documentDirName,
             documentRelativeDirName: normalizedRelativeDirName,
             documentFileName: path.basename(documentFilePath),
@@ -453,9 +444,9 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
             picOriginalName,
             fileBaseName,
             fileExtName,
+            hash,
             unixTime,
-            isoTime,
-            counter: String(counter).padStart(2, '0')
+            isoTime
         };
     }
 
@@ -463,6 +454,10 @@ class MarkdownImageInsertProvider implements vscode.DocumentDropEditProvider, vs
         return value.replace(/\$\{([a-zA-Z0-9_]+)\}/g, (full, key: string) => {
             return variables[key] ?? full;
         });
+    }
+
+    private hashBuffer(buffer: Uint8Array): string {
+        return createHash('sha1').update(buffer).digest('hex');
     }
 
     private toMarkdownRelativePath(documentUri: vscode.Uri, targetUri: vscode.Uri): string {

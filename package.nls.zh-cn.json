@@ -4,7 +4,7 @@
   "command.insertImage.title": "从文件插入图片",
   "command.category": "Markdown 图像助手",
   "config.title": "Markdown 图像助手",
-  "config.path.description": "单一路径模板，包含目录与文件名（不含后缀）。支持 {date}、{time}、{counter}、{name} 以及模板变量：${documentDirName}、${documentRelativeDirName}、${documentBaseName}、${documentWorkspaceFolder}、${fileName}、${picOriginalName}、${fileBaseName}、${fileExtName}、${unixTime}、${isoTime}。",
+  "config.path.description": "单一路径模板，包含目录与文件名（不含后缀）。支持模板变量：${date}、${time}、${documentDirName}、${documentRelativeDirName}、${documentBaseName}、${documentWorkspaceFolder}、${fileName}、${picOriginalName}、${fileBaseName}、${fileExtName}、${hash}、${unixTime}、${isoTime}。",
   "config.compressQuality.description": "受支持图片格式的压缩质量。",
   "config.maxWidth.description": "可选的最大宽度（像素）。设为 0 表示不限制缩放。",
   "config.outputFormat.description": "输出图片格式。设为 webp 可在支持场景下获得更高压缩率。"

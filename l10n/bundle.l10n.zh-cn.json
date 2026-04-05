@@ -1,7 +1,7 @@
 {
   "Insert compressed image links": "插入已压缩的图片链接",
   "Paste compressed image links": "粘贴已压缩的图片链接",
-  "Open a Markdown editor before inserting images.": "请先打开一个 Markdown 文件再插入图片。",
+  "Open a Markdown file before inserting images.": "请先打开一个 Markdown 文件再插入图片。",
   "Insert Images": "插入图片",
   "No supported image files were selected.": "未选择受支持的图片文件。",
   "An open workspace folder is required to save inserted images.": "保存插入图片需要先打开一个工作区文件夹。"

@@ -1,6 +1,6 @@
 # Markdown 图像助手
 
-一个用于 Markdown 编辑的 VS Code 扩展。按住 Shift 拖入图片后，插件会自动压缩图片、保存到已配置目录，并在文档中插入相对路径的 Markdown 图片链接。
+一个用于 Markdown 编辑的 VS Code 扩展。按住 Shift 拖入图片后，插件会自动压缩图片、保存到路径模板指定的位置，并在文档中插入相对路径的 Markdown 图片链接。
 
 ## 功能
 
@@ -9,7 +9,7 @@
 - 新增命令 `Markdown 图像助手: 从文件插入图片`，无需拖拽或粘贴也可手动插入图片。
 - 在 Markdown 文件编辑器右键菜单中新增快捷插图项。
 - 保存前会压缩受支持的图片格式。
-- 按可配置的命名模式重命名生成文件。
+- 按可配置的路径模板生成文件名和目录。
 - 在拖拽位置插入相对路径的 Markdown 图片链接。
 
 ## 配置项
@@ -18,14 +18,17 @@
 
 路径使用提示：
 
-- 推荐直接把文件名也写进 `mdnote.path`，例如 `${documentRelativeDirName}/assets/${picOriginalName}-{counter}`。
+- 推荐直接把文件名也写进 `mdnote.path`，例如 `${documentRelativeDirName}/assets/${picOriginalName}`。
+- 如果你想让文件名更稳定且更容易避免重复，可以写成 `${documentRelativeDirName}/assets/${picOriginalName}-${hash}`。
 - 即使在 `mdnote.path` 里写了后缀，插件也会忽略该后缀并按 `mdnote.outputFormat` 自动拼接。
 - `mdnote.compressQuality`: 受支持压缩格式的压缩质量。
 - `mdnote.maxWidth`: 可选的大图宽度限制（超出时会缩放）。
 - `mdnote.outputFormat`: 设为 `webp` 可将拖入图片统一转换为 webp，以获得更高压缩率。
 
-支持的模板变量（简化版）：
+支持的模板变量（统一使用 `${...}`）：
 
+- `${date}` 当前日期，格式 `YYYYMMDD`
+- `${time}` 当前时间，格式 `HHMMSS`
 - `${documentDirName}` Markdown 文件绝对目录
 - `${documentRelativeDirName}` Markdown 文件相对工作区目录
 - `${documentBaseName}` Markdown 文件名（不含扩展名）
@@ -33,13 +36,15 @@
 - `${fileName}` 源图片文件名
 - `${picOriginalName}` 源图片原始文件名（不含后缀）
 - `${fileExtName}` 源图片扩展名
+- `${hash}` 源图片内容的 SHA-1 哈希值，用于稳定命名和去重
 - `${unixTime}` 当前毫秒时间戳
 - `${isoTime}` 当前 ISO 时间字符串
 
 示例：
 
-- `mdnote.path`: `${documentRelativeDirName}/assets/${documentBaseName}/${documentBaseName}-${unixTime}-{counter}`
-- `mdnote.path`: `${documentRelativeDirName}/assets/${picOriginalName}-${unixTime}-{counter}`
+- `mdnote.path`: `${documentRelativeDirName}/assets/${picOriginalName}`
+- `mdnote.path`: `${documentRelativeDirName}/assets/${picOriginalName}-${hash}`
+- `mdnote.path`: `${documentRelativeDirName}/assets/${documentBaseName}/${documentBaseName}-${unixTime}`
 
 ## 说明
 
