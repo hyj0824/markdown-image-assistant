@@ -1,0 +1,81 @@
+{
+  "name": "markdown-image-assistant",
+  "displayName": "%ext.displayName%",
+  "description": "%ext.description%",
+  "version": "0.0.1",
+  "publisher": "hyj0824",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./out/extension.js",
+  "l10n": "./l10n",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mdnote.insertImageFromFile",
+        "title": "%command.insertImage.title%",
+        "category": "%command.category%"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mdnote.insertImageFromFile",
+          "when": "editorLangId == markdown",
+          "group": "navigation@50"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "%config.title%",
+      "properties": {
+        "mdnote.path": {
+          "type": "string",
+          "default": "assets/images/img-{date}-{counter}",
+          "description": "%config.path.description%"
+        },
+        "mdnote.compressQuality": {
+          "type": "number",
+          "default": 82,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "%config.compressQuality.description%"
+        },
+        "mdnote.maxWidth": {
+          "type": "number",
+          "default": 1600,
+          "minimum": 0,
+          "description": "%config.maxWidth.description%"
+        },
+        "mdnote.outputFormat": {
+          "type": "string",
+          "default": "keep",
+          "enum": [
+            "keep",
+            "webp"
+          ],
+          "description": "%config.outputFormat.description%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "@types/vscode": "^1.96.0",
+    "typescript": "^5.7.3"
+  }
+}

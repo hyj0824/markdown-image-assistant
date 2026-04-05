@@ -1,0 +1,11 @@
+{
+  "ext.displayName": "Markdown Image Assistant",
+  "ext.description": "Auto-compress, rename, and insert images for Markdown via drag, paste, and command.",
+  "command.insertImage.title": "Insert Image From File",
+  "command.category": "Markdown Image Assistant",
+  "config.title": "Markdown Image Assistant",
+  "config.path.description": "Single path template including folder and file name (without extension). Supports {date}, {time}, {counter}, {name} and template variables: ${documentDirName}, ${documentRelativeDirName}, ${documentBaseName}, ${documentWorkspaceFolder}, ${fileName}, ${picOriginalName}, ${fileBaseName}, ${fileExtName}, ${unixTime}, ${isoTime}.",
+  "config.compressQuality.description": "Compression quality used for supported image formats.",
+  "config.maxWidth.description": "Optional maximum width in pixels. Set to 0 to disable resizing.",
+  "config.outputFormat.description": "Output image format. Use webp for stronger compression when supported by your workflow."
+}
